@@ -107,3 +107,20 @@ export interface AICommunitySummaryResponse {
   }[];
   isLiveAi: boolean;
 }
+
+export interface EmailNotification {
+  id: string;
+  recipientEmail: string;
+  recipientName: string;
+  recipientUserId: string;
+  reportId: string;
+  reportTitle: string;
+  previousStatus: ReportStatus;
+  newStatus: ReportStatus;
+  subject: string;
+  message: string;
+  dispatcherName: string;
+  read: boolean;
+  sentAt: string;
+}
+

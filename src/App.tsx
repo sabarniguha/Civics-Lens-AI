@@ -3,14 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
 import { auth, googleProvider, testConnection } from './firebase/config';
-import { Report } from './types';
+import { Report, EmailNotification } from './types';
 import {
   subscribeToReports,
+  subscribeToNotifications,
   seedInitialReportsToFirestore,
   INITIAL_SAMPLE_REPORTS,
+  INITIAL_SAMPLE_NOTIFICATIONS,
 } from './firebase/service';
 import { Navbar } from './components/Navbar';
 import { ResidentDashboard } from './components/ResidentDashboard';
@@ -19,6 +21,7 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { CommunityInsights } from './components/CommunityInsights';
 import { ReportDetailModal } from './components/ReportDetailModal';
 import { ConfigModal } from './components/ConfigModal';
+import { NotificationDrawer } from './components/NotificationDrawer';
 import {
   ShieldAlert,
   Sparkles,
@@ -26,7 +29,9 @@ import {
   CheckCircle2,
   Info,
   Building2,
-  Heart,
+  Mail,
+  ArrowRight,
+  X,
 } from 'lucide-react';
 
 export default function App() {
@@ -39,7 +44,13 @@ export default function App() {
   const [isConfigOpen, setIsConfigOpen] = useState<boolean>(false);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
 
-  // Initialize Firebase connection & Auth listener
+  // Simulated Email Notifications state
+  const [notifications, setNotifications] = useState<EmailNotification[]>(INITIAL_SAMPLE_NOTIFICATIONS);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
+  const [activeEmailToast, setActiveEmailToast] = useState<EmailNotification | null>(null);
+  const previousNotifCount = useRef(INITIAL_SAMPLE_NOTIFICATIONS.length);
+
+  // Initialize Firebase connection, Auth listener, and Notification listener
   useEffect(() => {
     // 1. Test Firestore connection on boot per Firebase skill guidelines
     testConnection().then((isOnline) => {
@@ -66,14 +77,31 @@ export default function App() {
       }
     });
 
-    // 4. Optionally seed sample records if needed
+    // 4. Real-time simulated email notifications subscription
+    const unsubscribeNotifications = subscribeToNotifications(
+      currentUser?.email,
+      currentUser?.uid,
+      (updatedNotifs) => {
+        // If a new email was just dispatched, show interactive floating toast
+        if (updatedNotifs.length > previousNotifCount.current) {
+          const newest = updatedNotifs[0];
+          setActiveEmailToast(newest);
+          setTimeout(() => setActiveEmailToast(null), 8000);
+        }
+        previousNotifCount.current = updatedNotifs.length;
+        setNotifications(updatedNotifs);
+      }
+    );
+
+    // 5. Optionally seed sample records if needed
     seedInitialReportsToFirestore();
 
     return () => {
       unsubscribeAuth();
       unsubscribeReports();
+      unsubscribeNotifications();
     };
-  }, []);
+  }, [currentUser]);
 
   // Sync selectedReport if updated in list
   useEffect(() => {
@@ -89,7 +117,6 @@ export default function App() {
       await signInWithPopup(auth, googleProvider);
     } catch (err: any) {
       console.warn('Sign in with popup canceled or blocked:', err.message);
-      // Don't alert if user merely closed popup
       if (err.code !== 'auth/popup-closed-by-user') {
         alert(`Authentication: ${err.message}. You can continue reporting issues in guest mode.`);
       }
@@ -108,6 +135,8 @@ export default function App() {
 
   // Pending reviews count
   const pendingReviewCount = reports.filter((r) => r.status === 'Submitted').length;
+  // Unread emails count
+  const unreadNotificationCount = notifications.filter((n) => !n.read).length;
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans selection:bg-emerald-500 selection:text-white">
@@ -123,6 +152,8 @@ export default function App() {
         isDemoMode={isDemoMode}
         onOpenConfig={() => setIsConfigOpen(true)}
         pendingReviewCount={pendingReviewCount}
+        unreadNotificationCount={unreadNotificationCount}
+        onOpenNotifications={() => setIsNotificationsOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -174,6 +205,17 @@ export default function App() {
         onStatusUpdated={() => {}}
       />
 
+      {/* Simulated Email Inbox Drawer */}
+      <NotificationDrawer
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
+        notifications={notifications}
+        onSelectReportId={(reportId) => {
+          const found = reports.find((r) => r.id === reportId);
+          if (found) setSelectedReport(found);
+        }}
+      />
+
       {/* System Configuration & Deployment Modal */}
       <ConfigModal
         isOpen={isConfigOpen}
@@ -182,6 +224,51 @@ export default function App() {
         setIsDemoMode={setIsDemoMode}
         currentUserEmail={currentUser?.email}
       />
+
+      {/* Live Animated Floating Email Notification Toast */}
+      {activeEmailToast && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-md w-full bg-slate-900 text-white rounded-2xl p-4 shadow-2xl border border-emerald-500/40 animate-in slide-in-from-bottom-5 duration-200">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-md">
+              <Mail className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                  Simulated Email Dispatched
+                </span>
+                <button
+                  onClick={() => setActiveEmailToast(null)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <h4 className="text-xs font-bold text-white truncate mt-0.5">
+                {activeEmailToast.subject}
+              </h4>
+              <p className="text-[11px] text-slate-300 line-clamp-1 mt-0.5">
+                Sent to: {activeEmailToast.recipientEmail}
+              </p>
+              <div className="mt-2.5 flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setActiveEmailToast(null);
+                    setIsNotificationsOpen(true);
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1 transition-colors"
+                >
+                  View Email
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+                <span className="text-[10px] text-slate-400">
+                  Status: {activeEmailToast.newStatus}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Civic Footer */}
       <footer className="bg-white border-t border-slate-200 mt-16 py-8">
@@ -195,6 +282,14 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIsNotificationsOpen(true)}
+              className="flex items-center gap-1 text-slate-600 hover:text-emerald-700 font-medium"
+            >
+              <Mail className="w-3.5 h-3.5 text-emerald-600" />
+              Simulated Email Inbox ({unreadNotificationCount})
+            </button>
+            <span>•</span>
             <span className="flex items-center gap-1 text-slate-600">
               <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
               Gemini 3.8 Flash

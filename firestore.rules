@@ -73,6 +73,25 @@ service cloud.firestore {
       allow delete: if isAdmin() && isValidId(reportId);
     }
 
+    // Notifications collection for simulated transactional emails
+    match /notifications/{notificationId} {
+      allow get, list: if isSignedIn() && (
+        resource.data.recipientUserId == request.auth.uid ||
+        resource.data.recipientEmail == request.auth.token.email ||
+        isAdmin()
+      );
+
+      allow create: if isSignedIn() && isValidId(notificationId);
+
+      allow update: if isSignedIn() && isValidId(notificationId) && (
+        resource.data.recipientUserId == request.auth.uid ||
+        resource.data.recipientEmail == request.auth.token.email ||
+        isAdmin()
+      );
+
+      allow delete: if isAdmin() && isValidId(notificationId);
+    }
+
     // Admins collection
     match /admins/{adminId} {
       allow read: if isSignedIn() && isValidId(adminId);

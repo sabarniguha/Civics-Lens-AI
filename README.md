@@ -35,6 +35,13 @@
    - Status pipeline resolution funnel.
    - **Gemini AI Strategic Digest**: Automated synthesis summarizing recurring neighborhood problems, geographic hotspots, and proactive civic interventions.
 
+5. **Simulated Email Notification Service (Firebase Context)**:
+   - Automatically triggers whenever an administrator or city official changes the lifecycle status of an issue in Cloud Firestore.
+   - Formats transactional municipal emails with report reference ID, previous and new status, dispatcher notes, and timestamp.
+   - Persists delivered emails to the `notifications` collection in Cloud Firestore with secure ABAC security rules.
+   - **Interactive Resident Email Inbox**: Accessible from the top navigation bar with real-time unread counter, email listing, and full rich municipal email viewer.
+   - **Real-Time Toast Alerts**: Floating animated notification whenever a simulated email is dispatched.
+
 ---
 
 ## 🏗️ Architecture & Security

@@ -118,6 +118,26 @@
         }
       },
       "required": ["email", "role"]
+    },
+    "Notification": {
+      "title": "Email Notification",
+      "description": "Simulated transactional email dispatched to a resident upon report status transition",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Notification identifier" },
+        "recipientEmail": { "type": "string", "description": "Resident target email" },
+        "recipientName": { "type": "string", "description": "Resident name" },
+        "recipientUserId": { "type": "string", "description": "Resident user ID" },
+        "reportId": { "type": "string", "description": "Associated issue ID" },
+        "reportTitle": { "type": "string", "description": "Issue summary" },
+        "previousStatus": { "type": "string", "description": "Status before transition" },
+        "newStatus": { "type": "string", "description": "Updated lifecycle status" },
+        "subject": { "type": "string", "description": "Email subject header" },
+        "message": { "type": "string", "description": "Dispatch note from municipal official" },
+        "read": { "type": "boolean", "description": "Whether resident opened notification" },
+        "sentAt": { "type": "string", "format": "date-time", "description": "Dispatch timestamp" }
+      },
+      "required": ["recipientEmail", "reportId", "newStatus", "subject", "sentAt"]
     }
   },
   "firestore": {
@@ -128,6 +148,10 @@
     "/admins/{adminId}": {
       "schema": "Admin",
       "description": "Registered administrator accounts for CivicLens staff"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Simulated email notifications sent to residents on status changes"
     }
   }
 }

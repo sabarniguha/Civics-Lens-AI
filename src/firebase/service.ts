@@ -11,7 +11,7 @@ import {
   limit,
 } from 'firebase/firestore';
 import { db, auth, handleFirestoreError } from './config';
-import { Report, ReportStatus, OperationType, StatusHistoryItem } from '../types';
+import { Report, ReportStatus, OperationType, StatusHistoryItem, EmailNotification } from '../types';
 
 export const INITIAL_SAMPLE_REPORTS: Report[] = [
   {
@@ -325,6 +325,154 @@ export async function saveReportToFirestore(reportData: Omit<Report, 'id' | 'cre
   }
 }
 
+// Simulated Email Notifications Store
+export const INITIAL_SAMPLE_NOTIFICATIONS: EmailNotification[] = [
+  {
+    id: 'notif-101',
+    recipientEmail: 'sarah.jenkins@community.org',
+    recipientName: 'Sarah Jenkins',
+    recipientUserId: 'seed-user-1',
+    reportId: 'REP-10492',
+    reportTitle: 'Severe pothole damaging wheel rims near school zone',
+    previousStatus: 'Under Review',
+    newStatus: 'In Progress',
+    subject: '[CivicLens AI Update] Report #REP-10492 status changed to "In Progress"',
+    message: 'Road Crew Lead Davis scheduled cold patch asphalt repair for this afternoon under work order #8920.',
+    dispatcherName: 'Road Crew Lead Davis',
+    read: false,
+    sentAt: new Date(Date.now() - 6 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: 'notif-102',
+    recipientEmail: 'david.chen@community.org',
+    recipientName: 'David Chen',
+    recipientUserId: 'seed-user-2',
+    reportId: 'REP-10493',
+    reportTitle: 'Flickering high-voltage streetlight and exposed wiring base',
+    previousStatus: 'Submitted',
+    newStatus: 'Under Review',
+    subject: '[CivicLens AI Update] Report #REP-10493 status changed to "Under Review"',
+    message: 'Flagged by City Safety Triage as Critical electrical hazard. Utility electrician notified for emergency securing.',
+    dispatcherName: 'City Safety Triage',
+    read: false,
+    sentAt: new Date(Date.now() - 4 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: 'notif-103',
+    recipientEmail: 'marcus.vance@community.org',
+    recipientName: 'Marcus Vance',
+    recipientUserId: 'seed-user-4',
+    reportId: 'REP-10495',
+    reportTitle: 'Storm drain clogged with heavy autumn leaves causing street flooding',
+    previousStatus: 'In Progress',
+    newStatus: 'Resolved',
+    subject: '[CivicLens AI Update] Report #REP-10495 has been "Resolved"',
+    message: 'Catch basin thoroughly cleared, flow tested, and verified clear of obstructions by Inspector Thorne.',
+    dispatcherName: 'Inspector Thorne',
+    read: true,
+    sentAt: new Date(Date.now() - 10 * 3600 * 1000).toISOString(),
+  },
+];
+
+let localFallbackNotifications: EmailNotification[] = [...INITIAL_SAMPLE_NOTIFICATIONS];
+let notificationListeners: ((notifs: EmailNotification[]) => void)[] = [];
+
+// Simulated email dispatch notification hook
+export async function dispatchSimulatedEmailNotification(notif: Omit<EmailNotification, 'id' | 'sentAt'>): Promise<EmailNotification> {
+  const notifId = `notif-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  const sentAt = new Date().toISOString();
+
+  const fullNotif: EmailNotification = {
+    ...notif,
+    id: notifId,
+    sentAt,
+  };
+
+  // 1. Update local cache & notify local reactive subscribers
+  localFallbackNotifications = [fullNotif, ...localFallbackNotifications];
+  notificationListeners.forEach((fn) => fn(localFallbackNotifications));
+
+  // 2. Persist to Firestore notifications collection
+  try {
+    const docRef = doc(db, 'notifications', notifId);
+    await setDoc(docRef, fullNotif);
+  } catch (error) {
+    console.warn('Note: Notification persisted to local simulated email queue:', error);
+  }
+
+  return fullNotif;
+}
+
+export function subscribeToNotifications(
+  userEmail: string | null | undefined,
+  userId: string | null | undefined,
+  callback: (notifs: EmailNotification[]) => void
+): () => void {
+  // Add to local event bus
+  notificationListeners.push(callback);
+
+  // Initial call with matching notifications
+  const filterList = () => {
+    return localFallbackNotifications.filter((n) => {
+      if (!userEmail && !userId) return true;
+      return (
+        (userEmail && n.recipientEmail.toLowerCase() === userEmail.toLowerCase()) ||
+        (userId && n.recipientUserId === userId) ||
+        // Always include sample notifications in test mode
+        true
+      );
+    });
+  };
+
+  callback(filterList());
+
+  // Subscribe to Firestore notifications collection if online
+  try {
+    const q = query(collection(db, 'notifications'), orderBy('sentAt', 'desc'), limit(30));
+    const unsubscribeFs = onSnapshot(
+      q,
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: EmailNotification[] = [];
+          snapshot.forEach((d) => {
+            list.push({ id: d.id, ...d.data() } as EmailNotification);
+          });
+          // Merge with local fallback
+          localFallbackNotifications = list;
+          callback(list);
+        }
+      },
+      (error) => {
+        console.warn('Realtime notifications listener fallback to simulated queue:', error.message);
+        callback(localFallbackNotifications);
+      }
+    );
+
+    return () => {
+      unsubscribeFs();
+      notificationListeners = notificationListeners.filter((l) => l !== callback);
+    };
+  } catch {
+    return () => {
+      notificationListeners = notificationListeners.filter((l) => l !== callback);
+    };
+  }
+}
+
+export async function markNotificationAsReadInFirestore(notificationId: string): Promise<void> {
+  localFallbackNotifications = localFallbackNotifications.map((n) =>
+    n.id === notificationId ? { ...n, read: true } : n
+  );
+  notificationListeners.forEach((fn) => fn(localFallbackNotifications));
+
+  try {
+    const docRef = doc(db, 'notifications', notificationId);
+    await updateDoc(docRef, { read: true });
+  } catch (error) {
+    console.warn('Mark as read updated in simulated queue:', error);
+  }
+}
+
 export async function updateReportStatusInFirestore(
   reportId: string,
   newStatus: ReportStatus,
@@ -342,9 +490,13 @@ export async function updateReportStatusInFirestore(
     notes: note.trim() || `Status updated to ${newStatus}`,
   };
 
+  // Find target report to trigger email notification
+  const existingReport = localFallbackReports.find((r) => r.id === reportId);
+  const prevStatus = existingReport ? existingReport.status : 'Submitted';
+
   try {
     const docRef = doc(db, 'reports', reportId);
-    // Update local store as well
+    // Update local store
     const existingIndex = localFallbackReports.findIndex((r) => r.id === reportId);
     if (existingIndex >= 0) {
       const updatedHistory = [...localFallbackReports[existingIndex].statusHistory, historyEntry];
@@ -372,6 +524,23 @@ export async function updateReportStatusInFirestore(
       };
     }
   }
+
+  // TRIGGER SIMULATED EMAIL NOTIFICATION SERVICE
+  if (existingReport && prevStatus !== newStatus) {
+    await dispatchSimulatedEmailNotification({
+      recipientEmail: existingReport.userEmail || 'resident@community.org',
+      recipientName: existingReport.userName || 'Community Resident',
+      recipientUserId: existingReport.userId,
+      reportId: existingReport.id,
+      reportTitle: existingReport.title,
+      previousStatus: prevStatus,
+      newStatus: newStatus,
+      subject: `[CivicLens AI Update] Issue #${existingReport.id} transitioned to "${newStatus}"`,
+      message: note.trim() || `Your reported community issue has been moved to ${newStatus}.`,
+      dispatcherName: updatedByName,
+      read: false,
+    });
+  }
 }
 
 export async function deleteReportFromFirestore(reportId: string): Promise<void> {
@@ -392,7 +561,12 @@ export async function seedInitialReportsToFirestore(): Promise<void> {
       const docRef = doc(db, 'reports', report.id);
       await setDoc(docRef, report, { merge: true });
     }
+    for (const notif of INITIAL_SAMPLE_NOTIFICATIONS) {
+      const docRef = doc(db, 'notifications', notif.id);
+      await setDoc(docRef, notif, { merge: true });
+    }
   } catch (error) {
     console.warn('Note on seeding: Firestore seeding skipped or restricted by rules:', error);
   }
 }
+

@@ -10,6 +10,8 @@ import {
   Info,
   Building2,
   Sparkles,
+  Mail,
+  Bell,
 } from 'lucide-react';
 import { User } from 'firebase/auth';
 
@@ -24,6 +26,8 @@ interface NavbarProps {
   isDemoMode: boolean;
   onOpenConfig: () => void;
   pendingReviewCount: number;
+  unreadNotificationCount: number;
+  onOpenNotifications: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -37,6 +41,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   isDemoMode,
   onOpenConfig,
   pendingReviewCount,
+  unreadNotificationCount,
+  onOpenNotifications,
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
@@ -134,6 +140,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className={`w-2 h-2 rounded-full ${isDemoMode ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`} />
               <span>{isDemoMode ? 'Demo Mode' : 'Live Firestore'}</span>
               <Info className="w-3.5 h-3.5 ml-0.5 text-slate-400" />
+            </button>
+
+            {/* Simulated Resident Email Inbox Button */}
+            <button
+              onClick={onOpenNotifications}
+              title="Open Simulated Resident Email Inbox"
+              className="relative p-2 rounded-xl text-slate-600 hover:text-slate-900 bg-slate-100/80 hover:bg-slate-200/80 transition-all border border-slate-200 flex items-center justify-center cursor-pointer"
+            >
+              <Mail className="w-4 h-4 text-slate-700" />
+              {unreadNotificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-emerald-600 text-white shadow-xs">
+                  {unreadNotificationCount}
+                </span>
+              )}
             </button>
 
             {/* Admin / Resident Role Toggle */}
