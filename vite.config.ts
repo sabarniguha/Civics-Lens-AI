@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig, Plugin } from 'vite';
 import dotenv from 'dotenv';
-import { handleAnalyzeIssue, handleCommunitySummary } from './src/server/api';
+import { handleAnalyzeIssue, handleCommunitySummary } from './src/server/api.ts';
 
 dotenv.config();
 

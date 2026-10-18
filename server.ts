@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { handleAnalyzeIssue, handleCommunitySummary } from './src/server/api';
+import { handleAnalyzeIssue, handleCommunitySummary } from './src/server/api.ts';
 
 dotenv.config();
 

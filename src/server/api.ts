@@ -1,5 +1,46 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import { AIAnalysisRequest, AIAnalysisResponse, AICommunitySummaryResponse, IssueCategory, ReportPriority } from '../types';
+export type IssueCategory =
+  | 'Potholes & Road Damage'
+  | 'Streetlights & Electrical'
+  | 'Sanitation & Illegal Dumping'
+  | 'Water, Sewer & Drainage'
+  | 'Parks & Public Facilities'
+  | 'Traffic & Pedestrian Safety'
+  | 'Graffiti & Vandalism'
+  | 'Other Community Issues';
+
+export type ReportPriority = 'Low' | 'Medium' | 'High' | 'Critical';
+
+export interface AIAnalysisRequest {
+  title?: string;
+  description: string;
+  location?: string;
+  category?: string;
+  imageBase64?: string;
+  mimeType?: string;
+}
+
+export interface AIAnalysisResponse {
+  category: IssueCategory;
+  priority: ReportPriority;
+  confidence: number;
+  explanation: string;
+  recommendedAction: string;
+  detectedUrgencyFlags: string[];
+  isLiveAi: boolean;
+  error?: string;
+}
+
+export interface AICommunitySummaryResponse {
+  summary: string;
+  keyThemes: {
+    theme: string;
+    affectedAreas: string;
+    recommendedCivicAction: string;
+  }[];
+  isLiveAi: boolean;
+}
+
 
 // Valid categories for community issues
 const VALID_CATEGORIES: IssueCategory[] = [
