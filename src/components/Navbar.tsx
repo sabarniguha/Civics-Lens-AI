@@ -12,6 +12,7 @@ import {
   Sparkles,
   Mail,
   Bell,
+  Video,
 } from 'lucide-react';
 import { User } from 'firebase/auth';
 
@@ -28,6 +29,7 @@ interface NavbarProps {
   pendingReviewCount: number;
   unreadNotificationCount: number;
   onOpenNotifications: () => void;
+  onOpenDemoGuide: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -43,6 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   pendingReviewCount,
   unreadNotificationCount,
   onOpenNotifications,
+  onOpenDemoGuide,
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
@@ -154,6 +157,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {unreadNotificationCount}
                 </span>
               )}
+            </button>
+
+            {/* 5-Min Video Script & Presenter Guide */}
+            <button
+              onClick={onOpenDemoGuide}
+              title="Open 5-Minute Demo Video Script & Teleprompter"
+              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-xs cursor-pointer"
+            >
+              <Video className="w-3.5 h-3.5 text-emerald-400" />
+              <span>5-Min Video Guide</span>
             </button>
 
             {/* Admin / Resident Role Toggle */}

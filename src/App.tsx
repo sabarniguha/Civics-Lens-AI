@@ -22,6 +22,7 @@ import { CommunityInsights } from './components/CommunityInsights';
 import { ReportDetailModal } from './components/ReportDetailModal';
 import { ConfigModal } from './components/ConfigModal';
 import { NotificationDrawer } from './components/NotificationDrawer';
+import { DemoGuideModal } from './components/DemoGuideModal';
 import {
   ShieldAlert,
   Sparkles,
@@ -32,6 +33,7 @@ import {
   Mail,
   ArrowRight,
   X,
+  Video,
 } from 'lucide-react';
 
 export default function App() {
@@ -42,6 +44,7 @@ export default function App() {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [isConfigOpen, setIsConfigOpen] = useState<boolean>(false);
+  const [isDemoGuideOpen, setIsDemoGuideOpen] = useState<boolean>(false);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
 
   // Simulated Email Notifications state
@@ -154,6 +157,7 @@ export default function App() {
         pendingReviewCount={pendingReviewCount}
         unreadNotificationCount={unreadNotificationCount}
         onOpenNotifications={() => setIsNotificationsOpen(true)}
+        onOpenDemoGuide={() => setIsDemoGuideOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -223,6 +227,14 @@ export default function App() {
         isDemoMode={isDemoMode}
         setIsDemoMode={setIsDemoMode}
         currentUserEmail={currentUser?.email}
+      />
+
+      {/* 5-Minute Demo Video Presenter Teleprompter Modal */}
+      <DemoGuideModal
+        isOpen={isDemoGuideOpen}
+        onClose={() => setIsDemoGuideOpen(false)}
+        onNavigateTab={(tab) => setActiveTab(tab)}
+        onOpenNotifications={() => setIsNotificationsOpen(true)}
       />
 
       {/* Live Animated Floating Email Notification Toast */}
