@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default-deny all documents
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'sabarni.guha15@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidReport(data) {
+      return data.title is string && data.title.size() >= 3 && data.title.size() <= 150
+        && data.description is string && data.description.size() >= 10 && data.description.size() <= 3000
+        && data.category is string && data.category.size() <= 60
+        && data.location is string && data.location.size() >= 3 && data.location.size() <= 200
+        && data.priority in ['Low', 'Medium', 'High', 'Critical']
+        && data.status in ['Submitted', 'Under Review', 'In Progress', 'Resolved']
+        && data.userId is string && data.userId == request.auth.uid
+        && data.isPublic is bool;
+    }
+
+    // Reports collection
+    match /reports/{reportId} {
+      allow get: if isSignedIn() && isValidId(reportId) && (
+        resource.data.isPublic == true ||
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+
+      allow list: if isSignedIn() && (
+        resource.data.isPublic == true ||
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+
+      allow create: if isSignedIn() && isValidId(reportId) && isValidReport(incoming());
+
+      allow update: if isSignedIn() && isValidId(reportId) && (
+        // Admin status update action
+        (isAdmin() && incoming().userId == existing().userId) ||
+        // Resident editing their own submission before it is picked up
+        (
+          existing().userId == request.auth.uid &&
+          existing().status == 'Submitted' &&
+          incoming().userId == request.auth.uid &&
+          isValidReport(incoming())
+        )
+      );
+
+      allow delete: if isAdmin() && isValidId(reportId);
+    }
+
+    // Admins collection
+    match /admins/{adminId} {
+      allow read: if isSignedIn() && isValidId(adminId);
+      allow write: if isAdmin() && isValidId(adminId);
+    }
+  }
+}

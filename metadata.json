@@ -1,0 +1,8 @@
+{
+  "name": "CivicLens AI — Smart Community Issue Resolver",
+  "description": "Modern civic-tech platform for reporting community issues, AI-driven triage and severity analysis with Gemini, resident tracking, and administrator resolution workflows.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

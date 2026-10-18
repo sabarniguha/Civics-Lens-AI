@@ -1,0 +1,133 @@
+{
+  "entities": {
+    "Report": {
+      "title": "Community Issue Report",
+      "description": "A public or resident-submitted community issue with location, category, AI analysis, and status history.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 150,
+          "description": "Short title of the community issue"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 3000,
+          "description": "Detailed description of the issue"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "Potholes & Road Damage",
+            "Streetlights & Electrical",
+            "Sanitation & Illegal Dumping",
+            "Water, Sewer & Drainage",
+            "Parks & Public Facilities",
+            "Traffic & Pedestrian Safety",
+            "Graffiti & Vandalism",
+            "Other Community Issues"
+          ],
+          "description": "Municipal category of the problem"
+        },
+        "location": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200,
+          "description": "Street address, intersection, or civic landmark"
+        },
+        "latitude": {
+          "type": "number",
+          "description": "Optional geographic latitude coordinate"
+        },
+        "longitude": {
+          "type": "number",
+          "description": "Optional geographic longitude coordinate"
+        },
+        "imageUrl": {
+          "type": "string",
+          "maxLength": 1000000,
+          "description": "Photo of the issue represented as URL or data URL"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["Low", "Medium", "High", "Critical"],
+          "description": "Assigned urgency level"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Submitted", "Under Review", "In Progress", "Resolved"],
+          "description": "Resolution lifecycle status"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the resident who reported the issue"
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "Contact email of reporting resident"
+        },
+        "userName": {
+          "type": "string",
+          "description": "Display name of reporting resident"
+        },
+        "isPublic": {
+          "type": "boolean",
+          "description": "Whether this issue is publicly visible to community members"
+        },
+        "aiRecommendation": {
+          "type": "object",
+          "description": "Advisory recommendation computed by Gemini"
+        },
+        "statusHistory": {
+          "type": "array",
+          "description": "Chronological audit trail of status updates"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last updated timestamp"
+        }
+      },
+      "required": ["title", "description", "category", "location", "priority", "status", "userId", "isPublic"]
+    },
+    "Admin": {
+      "title": "System Administrator",
+      "description": "Designated administrator record conferring triage and management rights",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Admin email address"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "moderator"],
+          "description": "Privilege level"
+        },
+        "addedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when admin status was granted"
+        }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Municipal issue reports submitted by residents and managed by civic officials"
+    },
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Registered administrator accounts for CivicLens staff"
+    }
+  }
+}
