@@ -3,7 +3,13 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig, Plugin } from 'vite';
 import dotenv from 'dotenv';
-import { handleAnalyzeIssue, handleCommunitySummary } from './src/server/api.ts';
+import {
+  handleAnalyzeIssue,
+  handleCommunitySummary,
+  handleTranscribeAudio,
+  handleChat,
+  handleMapsCivicLookup,
+} from './src/server/api.ts';
 
 dotenv.config();
 
@@ -43,6 +49,28 @@ function civicLensDevApiPlugin(): Plugin {
                 const summary = await handleCommunitySummary(parsed.reports || []);
                 res.setHeader('Content-Type', 'application/json');
                 res.end(JSON.stringify(summary));
+                return;
+              }
+
+              if (url.pathname === '/api/transcribe-audio') {
+                const { audioBase64, mimeType } = parsed;
+                const result = await handleTranscribeAudio(audioBase64, mimeType);
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify(result));
+                return;
+              }
+
+              if (url.pathname === '/api/chat') {
+                const result = await handleChat(parsed.messages || []);
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify(result));
+                return;
+              }
+
+              if (url.pathname === '/api/maps-lookup') {
+                const result = await handleMapsCivicLookup(parsed.query || '', parsed.location);
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify(result));
                 return;
               }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Sparkles,
   MapPin,
@@ -12,6 +12,8 @@ import {
   X,
   Navigation,
   ShieldAlert,
+  Mic,
+  MicOff,
 } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { IssueCategory, ReportPriority, AIRecommendation, Report } from '../types';
@@ -65,6 +67,66 @@ export const ReportIssuePage: React.FC<Props> = ({
   const [aiRecommendation, setAiRecommendation] = useState<AIRecommendation | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [appliedAi, setAppliedAi] = useState(false);
+
+  // Audio Dictation state (gemini-3.5-transcribe)
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  const handleStartRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        stream.getTracks().forEach((track) => track.stop());
+        setIsTranscribing(true);
+
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          try {
+            const base64Audio = reader.result as string;
+            const res = await fetch('/api/transcribe-audio', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ audioBase64: base64Audio, mimeType: 'audio/webm' }),
+            });
+            const data = await res.json();
+            if (data.text) {
+              setDescription((prev) => (prev ? `${prev} ${data.text}` : data.text));
+              if (formErrors.description) setFormErrors((errs) => ({ ...errs, description: '' }));
+            }
+          } catch (err) {
+            console.error('Transcription failed:', err);
+          } finally {
+            setIsTranscribing(false);
+          }
+        };
+        reader.readAsDataURL(audioBlob);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.warn('Microphone permission or support issue:', err);
+      alert('Microphone access is needed for audio dictation.');
+    }
+  };
+
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
 
   // Form Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -384,9 +446,26 @@ export const ReportIssuePage: React.FC<Props> = ({
             {/* Description */}
             <div>
               <div className="flex justify-between items-center mb-1.5">
-                <label htmlFor="issue-desc" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Detailed Description <span className="text-rose-500">*</span>
-                </label>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="issue-desc" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Detailed Description <span className="text-rose-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={isRecording ? handleStopRecording : handleStartRecording}
+                    disabled={isTranscribing}
+                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold transition-all ${
+                      isRecording
+                        ? 'bg-rose-500 text-white animate-pulse'
+                        : isTranscribing
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                    }`}
+                  >
+                    <Mic className={`w-3 h-3 ${isRecording ? 'animate-bounce' : ''}`} />
+                    {isRecording ? 'Stop Recording' : isTranscribing ? 'Transcribing...' : 'Voice Dictate'}
+                  </button>
+                </div>
                 <span className="text-[11px] text-slate-400">
                   {description.length} characters
                 </span>

@@ -23,6 +23,7 @@ import { ReportDetailModal } from './components/ReportDetailModal';
 import { ConfigModal } from './components/ConfigModal';
 import { NotificationDrawer } from './components/NotificationDrawer';
 import { DemoGuideModal } from './components/DemoGuideModal';
+import { CivicChatModal } from './components/CivicChatModal';
 import {
   ShieldAlert,
   Sparkles,
@@ -45,6 +46,7 @@ export default function App() {
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [isConfigOpen, setIsConfigOpen] = useState<boolean>(false);
   const [isDemoGuideOpen, setIsDemoGuideOpen] = useState<boolean>(false);
+  const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
 
   // Simulated Email Notifications state
@@ -236,6 +238,28 @@ export default function App() {
         onNavigateTab={(tab) => setActiveTab(tab)}
         onOpenNotifications={() => setIsNotificationsOpen(true)}
       />
+
+      {/* Gemini Civic Chatbot Modal */}
+      <CivicChatModal
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        onOpenReport={() => setActiveTab('report')}
+      />
+
+      {/* Floating CivicBot Chatbot Launcher */}
+      <button
+        onClick={() => setIsChatOpen(true)}
+        className="fixed bottom-6 left-6 z-40 px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl shadow-xl border border-slate-700/80 flex items-center gap-2.5 transition-all hover:scale-105 group cursor-pointer"
+        title="Open Gemini AI Civic Assistant"
+      >
+        <div className="w-6 h-6 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+          <Sparkles className="w-3.5 h-3.5" />
+        </div>
+        <div className="text-left hidden sm:block">
+          <span className="text-xs font-bold block leading-none">Ask CivicBot</span>
+          <span className="text-[10px] text-emerald-400 block leading-none mt-0.5">Gemini 3.8 Flash</span>
+        </div>
+      </button>
 
       {/* Live Animated Floating Email Notification Toast */}
       {activeEmailToast && (

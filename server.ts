@@ -2,7 +2,13 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { handleAnalyzeIssue, handleCommunitySummary } from './src/server/api.ts';
+import {
+  handleAnalyzeIssue,
+  handleCommunitySummary,
+  handleTranscribeAudio,
+  handleChat,
+  handleMapsCivicLookup,
+} from './src/server/api.ts';
 
 dotenv.config();
 
@@ -12,7 +18,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Parse JSON bodies with up to 20MB limit for image analysis
+// Parse JSON bodies with up to 20MB limit for image analysis and audio payloads
 app.use(express.json({ limit: '20mb' }));
 
 // Health check endpoint for Cloud Run
@@ -46,6 +52,54 @@ app.post('/api/insights-summary', async (req, res) => {
     console.error('Error generating community summary:', error);
     res.status(500).json({
       error: error.message || 'Failed to generate community summary with Gemini.',
+    });
+  }
+});
+
+// Gemini 3.5 Transcribe audio dictation endpoint
+app.post('/api/transcribe-audio', async (req, res) => {
+  try {
+    const { audioBase64, mimeType } = req.body;
+    if (!audioBase64) {
+      return res.status(400).json({ error: 'Audio payload missing.' });
+    }
+    const result = await handleTranscribeAudio(audioBase64, mimeType);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error transcribing audio:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to transcribe audio.',
+    });
+  }
+});
+
+// Gemini 3.8 Flash multi-turn civic assistant chatbot
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { messages } = req.body;
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: 'Messages array is required.' });
+    }
+    const result = await handleChat(messages);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error in chat endpoint:', error);
+    res.status(500).json({
+      error: error.message || 'Chat service error.',
+    });
+  }
+});
+
+// Gemini 3.8 Flash Google Maps Grounded search
+app.post('/api/maps-lookup', async (req, res) => {
+  try {
+    const { query, location } = req.body;
+    const result = await handleMapsCivicLookup(query, location);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error in maps lookup:', error);
+    res.status(500).json({
+      error: error.message || 'Maps grounding error.',
     });
   }
 });

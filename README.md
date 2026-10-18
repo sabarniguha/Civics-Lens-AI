@@ -42,6 +42,15 @@
    - **Interactive Resident Email Inbox**: Accessible from the top navigation bar with real-time unread counter, email listing, and full rich municipal email viewer.
    - **Real-Time Toast Alerts**: Floating animated notification whenever a simulated email is dispatched.
 
+6. **CivicLens AI Concierge Chatbot (`gemini-3.8-flash`)**:
+   - Multi-turn conversational civic assistant accessible via the bottom floating launcher.
+   - Maintains conversation history, scrollable message thread, and starter municipal prompt suggestions.
+   - Clarifies reporting rules, department jurisdictions, and estimated repair timelines.
+
+7. **Voice Dictation with Audio Transcription (`gemini-3.5-transcribe`)**:
+   - One-click microphone recording on the "Report Issue" page.
+   - Transcribes spoken descriptions using Google's `gemini-3.5-transcribe` audio model and inserts them directly into the report form.
+
 ---
 
 ## 🏗️ Architecture & Security
